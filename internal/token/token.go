@@ -247,13 +247,18 @@ func MarshalToken(t Token) []byte {
 }
 
 // UnmarshalToken deserializes a token from wire format.
+// It copies the data to avoid aliasing the input buffer.
 func UnmarshalToken(data []byte) (Token, error) {
 	if len(data) < 33 { // at least 32 value + 1 sig byte
 		return Token{}, fmt.Errorf("token data too short: %d", len(data))
 	}
+	value := make([]byte, 32)
+	copy(value, data[:32])
+	sig := make([]byte, len(data)-32)
+	copy(sig, data[32:])
 	return Token{
-		Value:     data[:32],
-		Signature: data[32:],
+		Value:     value,
+		Signature: sig,
 	}, nil
 }
 

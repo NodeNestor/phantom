@@ -103,43 +103,59 @@ func main() {
 func handleSOCKS5(conn net.Conn, mgr *circuit.Manager) {
 	defer conn.Close()
 
-	buf := make([]byte, 256)
-
-	// SOCKS5 greeting
-	n, err := conn.Read(buf)
-	if err != nil || n < 3 || buf[0] != 0x05 {
+	// SOCKS5 greeting: read version + nmethods
+	header := make([]byte, 2)
+	if _, err := io.ReadFull(conn, header); err != nil || header[0] != 0x05 {
+		return
+	}
+	nMethods := int(header[1])
+	if nMethods < 1 {
+		return
+	}
+	methods := make([]byte, nMethods)
+	if _, err := io.ReadFull(conn, methods); err != nil {
 		return
 	}
 	conn.Write([]byte{0x05, 0x00}) // no auth
 
-	// SOCKS5 connect request
-	n, err = conn.Read(buf)
-	if err != nil || n < 7 || buf[1] != 0x01 {
+	// SOCKS5 connect request: read VER, CMD, RSV, ATYP
+	reqHeader := make([]byte, 4)
+	if _, err := io.ReadFull(conn, reqHeader); err != nil {
+		return
+	}
+	if reqHeader[1] != 0x01 { // only CONNECT
 		conn.Write([]byte{0x05, 0x07, 0x00, 0x01, 0, 0, 0, 0, 0, 0})
 		return
 	}
 
 	var destAddr string
-	switch buf[3] {
+	switch reqHeader[3] {
 	case 0x01: // IPv4
-		if n < 10 {
+		addrBuf := make([]byte, 4+2) // 4 IP + 2 port
+		if _, err := io.ReadFull(conn, addrBuf); err != nil {
 			return
 		}
-		destAddr = fmt.Sprintf("%d.%d.%d.%d:%d", buf[4], buf[5], buf[6], buf[7],
-			uint16(buf[8])<<8|uint16(buf[9]))
+		destAddr = fmt.Sprintf("%d.%d.%d.%d:%d", addrBuf[0], addrBuf[1], addrBuf[2], addrBuf[3],
+			uint16(addrBuf[4])<<8|uint16(addrBuf[5]))
 	case 0x03: // Domain
-		domLen := int(buf[4])
-		if n < 5+domLen+2 {
+		domLenBuf := make([]byte, 1)
+		if _, err := io.ReadFull(conn, domLenBuf); err != nil {
 			return
 		}
-		port := uint16(buf[5+domLen])<<8 | uint16(buf[5+domLen+1])
-		destAddr = fmt.Sprintf("%s:%d", string(buf[5:5+domLen]), port)
+		domLen := int(domLenBuf[0])
+		domAndPort := make([]byte, domLen+2)
+		if _, err := io.ReadFull(conn, domAndPort); err != nil {
+			return
+		}
+		port := uint16(domAndPort[domLen])<<8 | uint16(domAndPort[domLen+1])
+		destAddr = fmt.Sprintf("%s:%d", string(domAndPort[:domLen]), port)
 	case 0x04: // IPv6
-		if n < 22 {
+		addrBuf := make([]byte, 16+2) // 16 IP + 2 port
+		if _, err := io.ReadFull(conn, addrBuf); err != nil {
 			return
 		}
-		ip := net.IP(buf[4:20])
-		port := uint16(buf[20])<<8 | uint16(buf[21])
+		ip := net.IP(addrBuf[:16])
+		port := uint16(addrBuf[16])<<8 | uint16(addrBuf[17])
 		destAddr = fmt.Sprintf("[%s]:%d", ip.String(), port)
 	default:
 		conn.Write([]byte{0x05, 0x08, 0x00, 0x01, 0, 0, 0, 0, 0, 0})

@@ -17,10 +17,11 @@ import (
 
 // Relay represents a known relay node.
 type Relay struct {
-	ID        string           `json:"id"`       // hex-encoded public key fingerprint
-	Address   string           `json:"address"`  // host:port
-	PublicKey [onion.KeySize]byte `json:"public_key"` // Curve25519 public key for onion encryption
-	Role      RelayRole        `json:"role"`     // guard, middle, exit
+	ID             string              `json:"id"`              // hex-encoded public key fingerprint
+	Address        string              `json:"address"`         // host:port
+	PublicKey      [onion.KeySize]byte `json:"public_key"`      // Curve25519 public key for onion encryption
+	NoisePublicKey []byte              `json:"noise_public_key,omitempty"` // Noise static public key (optional, for verification)
+	Role           RelayRole           `json:"role"`            // guard, middle, exit
 }
 
 // RelayRole determines what position a relay can serve in a circuit.
@@ -184,10 +185,11 @@ type directoryFile struct {
 }
 
 type relayJSON struct {
-	ID        string `json:"id"`
-	Address   string `json:"address"`
-	PublicKey string `json:"public_key"` // hex-encoded
-	Role      string `json:"role"`
+	ID             string `json:"id"`
+	Address        string `json:"address"`
+	PublicKey      string `json:"public_key"`                 // hex-encoded
+	NoisePublicKey string `json:"noise_public_key,omitempty"` // hex-encoded, optional
+	Role           string `json:"role"`
 }
 
 // SaveToFile persists the directory to a JSON file.
@@ -197,12 +199,16 @@ func (d *Directory) SaveToFile(path string) error {
 
 	df := directoryFile{}
 	for _, r := range d.relays {
-		df.Relays = append(df.Relays, relayJSON{
+		rj := relayJSON{
 			ID:        r.ID,
 			Address:   r.Address,
 			PublicKey: hex.EncodeToString(r.PublicKey[:]),
 			Role:      string(r.Role),
-		})
+		}
+		if len(r.NoisePublicKey) > 0 {
+			rj.NoisePublicKey = hex.EncodeToString(r.NoisePublicKey)
+		}
+		df.Relays = append(df.Relays, rj)
 	}
 
 	data, err := json.MarshalIndent(df, "", "  ")
@@ -235,12 +241,20 @@ func (d *Directory) LoadFromFile(path string) error {
 		var pubKey [onion.KeySize]byte
 		copy(pubKey[:], pubKeyBytes)
 
-		d.relays[rj.ID] = &Relay{
+		relay := &Relay{
 			ID:        rj.ID,
 			Address:   rj.Address,
 			PublicKey: pubKey,
 			Role:      RelayRole(rj.Role),
 		}
+		if rj.NoisePublicKey != "" {
+			noiseKey, err := hex.DecodeString(rj.NoisePublicKey)
+			if err != nil {
+				return fmt.Errorf("invalid noise public key for relay %s: %w", rj.ID, err)
+			}
+			relay.NoisePublicKey = noiseKey
+		}
+		d.relays[rj.ID] = relay
 	}
 	return nil
 }
