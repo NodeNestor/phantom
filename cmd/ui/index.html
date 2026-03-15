@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phantom VPN</title>
+<style>
+:root {
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1a2332;
+  --bg-card: #162031;
+  --border: #1e2d45;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #3b82f6;
+  --accent-glow: rgba(59, 130, 246, 0.3);
+  --green: #10b981;
+  --green-glow: rgba(16, 185, 129, 0.3);
+  --red: #ef4444;
+  --red-glow: rgba(239, 68, 68, 0.3);
+  --yellow: #f59e0b;
+  --yellow-glow: rgba(245, 158, 11, 0.2);
+  --purple: #8b5cf6;
+  --radius: 12px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Header */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 32px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+}
+
+.logo h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.logo span {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.status-dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green-glow); }
+
+/* Grid Layout */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.grid-full { grid-column: 1 / -1; }
+
+/* Card */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+/* Connect Button */
+.connect-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+
+.connect-btn {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 3px solid var(--red);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.4s ease;
+  position: relative;
+  color: var(--text-primary);
+}
+
+.connect-btn::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1px solid var(--red);
+  opacity: 0.3;
+  transition: all 0.4s ease;
+}
+
+.connect-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 40px var(--red-glow);
+}
+
+.connect-btn.connected {
+  border-color: var(--green);
+}
+
+.connect-btn.connected::before {
+  border-color: var(--green);
+}
+
+.connect-btn.connected:hover {
+  box-shadow: 0 0 40px var(--green-glow);
+}
+
+.connect-btn .power-icon {
+  width: 48px;
+  height: 48px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.connect-btn .btn-label {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.connect-btn.connecting {
+  border-color: var(--yellow);
+  animation: pulse-ring 1.5s ease-in-out infinite;
+}
+
+.connect-btn.connecting::before {
+  border-color: var(--yellow);
+  animation: spin 2s linear infinite;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 20px var(--yellow-glow); }
+  50% { box-shadow: 0 0 40px var(--yellow-glow); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.connect-status {
+  margin-top: 24px;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+.connect-uptime {
+  margin-top: 8px;
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.connect-uptime.visible { opacity: 1; }
+
+/* Circuit Visualization */
+.circuit-path {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 16px 0;
+  overflow-x: auto;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.circuit-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 90px;
+}
+
+.node-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.3s;
+  background: var(--bg-secondary);
+}
+
+.node-circle.you { border-color: var(--accent); color: var(--accent); }
+.node-circle.guard { border-color: var(--green); color: var(--green); }
+.node-circle.middle { border-color: var(--yellow); color: var(--yellow); }
+.node-circle.exit { border-color: var(--red); color: var(--red); }
+.node-circle.internet { border-color: var(--purple); color: var(--purple); }
+
+.node-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.node-id {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+}
+
+.circuit-arrow {
+  width: 32px;
+  height: 2px;
+  background: var(--border);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.circuit-arrow::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: -3px;
+  border: solid var(--border);
+  border-width: 0 2px 2px 0;
+  padding: 3px;
+  transform: rotate(-45deg);
+}
+
+.circuit-arrow.active { background: var(--green); }
+.circuit-arrow.active::after { border-color: var(--green); }
+
+/* Stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-value.green { color: var(--green); }
+.stat-value.red { color: var(--red); }
+.stat-value.yellow { color: var(--yellow); }
+.stat-value.blue { color: var(--accent); }
+
+.token-bar {
+  height: 4px;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.token-bar-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 2px;
+  transition: width 0.5s ease, background 0.5s ease;
+}
+
+.token-bar-fill.warning { background: var(--yellow); }
+.token-bar-fill.critical { background: var(--red); }
+
+/* Settings */
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.form-group input[type="text"],
+.form-group input[type="url"],
+.form-group input[type="number"] {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  border-color: var(--accent);
+}
+
+.slider-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.slider-group input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  outline: none;
+}
+
+.slider-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
+}
+
+.slider-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 28px;
+  text-align: center;
+}
+
+.toggle-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  transition: all 0.3s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: all 0.3s;
+}
+
+.toggle input:checked + .toggle-slider {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+  background: white;
+}
+
+.btn-save {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  align-self: flex-start;
+}
+
+.btn-save:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* Relay List */
+.relay-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.relay-table th {
+  text-align: left;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.relay-table td {
+  padding: 10px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.relay-table tr:last-child td { border-bottom: none; }
+
+.relay-id {
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.role-badge.guard { background: rgba(16,185,129,0.15); color: var(--green); }
+.role-badge.middle { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.role-badge.exit { background: rgba(239,68,68,0.15); color: var(--red); }
+.role-badge.any { background: rgba(59,130,246,0.15); color: var(--accent); }
+
+/* Activity Log */
+.log-container {
+  max-height: 320px;
+  overflow-y: auto;
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.log-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.log-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.log-entry {
+  display: flex;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.log-time {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.log-msg { color: var(--text-secondary); }
+.log-msg.info { color: var(--accent); }
+.log-msg.success { color: var(--green); }
+.log-msg.warning { color: var(--yellow); }
+.log-msg.error { color: var(--red); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .grid { grid-template-columns: 1fr; }
+  .grid-full { grid-column: 1; }
+  .connect-btn { width: 150px; height: 150px; }
+  .connect-uptime { font-size: 22px; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .circuit-path { flex-wrap: wrap; }
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 32px;
+  font-size: 14px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">P</div>
+      <div>
+        <h1>Phantom</h1>
+        <span>Multi-Hop Onion VPN</span>
+      </div>
+    </div>
+    <div class="header-status">
+      <div class="status-dot" id="headerDot"></div>
+      <span id="headerStatus">Disconnected</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Connect Button -->
+    <div class="card connect-section grid-full">
+      <button class="connect-btn" id="connectBtn" onclick="toggleConnection()">
+        <svg class="power-icon" viewBox="0 0 24 24">
+          <path d="M12 2v10M18.36 6.64A9 9 0 1 1 5.64 6.64" stroke-linecap="round"/>
+        </svg>
+        <span class="btn-label" id="btnLabel">Connect</span>
+      </button>
+      <div class="connect-status" id="connectStatus">Click to connect</div>
+      <div class="connect-uptime" id="uptimeDisplay">00:00:00</div>
+    </div>
+
+    <!-- Circuit Visualization -->
+    <div class="card grid-full">
+      <div class="card-title">Circuit Path</div>
+      <div class="circuit-path" id="circuitPath">
+        <div class="empty-state">No active circuit</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="card">
+      <div class="card-title">Statistics</div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-label">Status</span>
+          <span class="stat-value" id="statStatus">Disconnected</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Uptime</span>
+          <span class="stat-value blue" id="statUptime">--:--:--</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Circuits Built</span>
+          <span class="stat-value blue" id="statCircuits">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Data Sent</span>
+          <span class="stat-value" id="statUpload">0 B</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Data Received</span>
+          <span class="stat-value" id="statDownload">0 B</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Tokens Remaining</span>
+          <span class="stat-value green" id="statTokens">0</span>
+        </div>
+      </div>
+      <div class="token-bar">
+        <div class="token-bar-fill" id="tokenBar" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="card">
+      <div class="card-title">Settings</div>
+      <div class="settings-form">
+        <div class="form-group">
+          <label>Number of Hops</label>
+          <div class="slider-group">
+            <input type="range" id="settHops" min="2" max="5" value="3" oninput="document.getElementById('hopsVal').textContent=this.value">
+            <span class="slider-value" id="hopsVal">3</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Auth Server URL</label>
+          <input type="url" id="settAuthURL" placeholder="http://localhost:9000">
+        </div>
+        <div class="form-group">
+          <label>Relay Directory File</label>
+          <input type="text" id="settDirFile" placeholder="directory.json">
+        </div>
+        <div class="form-group toggle-group">
+          <label>Auto-Reconnect</label>
+          <label class="toggle">
+            <input type="checkbox" id="settAutoReconnect">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <button class="btn-save" onclick="saveSettings()">Save Settings</button>
+      </div>
+    </div>
+
+    <!-- Auth Server -->
+    <div class="card">
+      <div class="card-title">Auth Server</div>
+      <div class="settings-form">
+        <div class="stat-item">
+          <span class="stat-label">Status</span>
+          <span class="stat-value" id="authStatus" style="font-size:16px">Stopped</span>
+        </div>
+        <div class="form-group">
+          <label>Listen Address</label>
+          <input type="text" id="authListen" value=":9000" placeholder=":9000">
+        </div>
+        <div class="form-group">
+          <label>Secret</label>
+          <input type="text" id="authSecret" placeholder="shared-secret">
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-save" onclick="startAuth()" id="authStartBtn">Start Auth Server</button>
+          <button class="btn-save" onclick="stopAuth()" id="authStopBtn" style="background:var(--red);display:none">Stop</button>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
+          Generates signing keys automatically. Give <code>auth.pub</code> to all relays.
+        </div>
+      </div>
+    </div>
+
+    <!-- Relay Management -->
+    <div class="card">
+      <div class="card-title">Relay Management</div>
+      <div class="settings-form">
+        <div class="form-group">
+          <label>Relay Address (host:port)</label>
+          <input type="text" id="newRelayAddr" placeholder="my-vps.example.com:9001">
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select id="newRelayRole" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text-primary);font-size:14px">
+            <option value="any">Any</option>
+            <option value="guard">Guard (entry)</option>
+            <option value="middle">Middle</option>
+            <option value="exit">Exit</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-save" onclick="addRelay()">Add Relay</button>
+          <button class="btn-save" onclick="showDeploy()" style="background:var(--purple)">Deploy Script</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Relay List -->
+    <div class="card grid-full">
+      <div class="card-title">Known Relays</div>
+      <div id="relayList">
+        <div class="empty-state">No relays loaded</div>
+      </div>
+    </div>
+
+    <!-- Deploy Script Modal -->
+    <div id="deployModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;display:none;align-items:center;justify-content:center">
+      <div class="card" style="max-width:600px;width:90%;max-height:80vh;overflow-y:auto">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Relay Deploy Script</span>
+          <button onclick="hideModal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px">&times;</button>
+        </div>
+        <pre id="deployScript" style="background:var(--bg-secondary);padding:16px;border-radius:8px;font-size:12px;overflow-x:auto;white-space:pre-wrap;color:var(--green)"></pre>
+        <button class="btn-save" onclick="copyDeploy()" style="margin-top:12px">Copy to Clipboard</button>
+      </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="card grid-full">
+      <div class="card-title">Activity Log</div>
+      <div class="log-container" id="logContainer">
+        <div class="empty-state">No activity yet</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  let ws = null;
+  let connected = false;
+  let connecting = false;
+  let uptimeStart = null;
+  let uptimeInterval = null;
+  let maxTokens = 50;
+
+  function $(id) { return document.getElementById(id); }
+
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+    return (b / 1073741824).toFixed(2) + ' GB';
+  }
+
+  function formatUptime(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+
+  function addLog(msg, level) {
+    const container = $('logContainer');
+    if (container.querySelector('.empty-state')) {
+      container.innerHTML = '';
+    }
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    const now = new Date();
+    const time = String(now.getHours()).padStart(2,'0') + ':' +
+                 String(now.getMinutes()).padStart(2,'0') + ':' +
+                 String(now.getSeconds()).padStart(2,'0');
+    entry.innerHTML = '<span class="log-time">' + time + '</span>' +
+                      '<span class="log-msg ' + (level||'') + '">' + escapeHtml(msg) + '</span>';
+    container.appendChild(entry);
+    container.scrollTop = container.scrollHeight;
+    // Keep max 200 entries
+    while (container.children.length > 200) {
+      container.removeChild(container.firstChild);
+    }
+  }
+
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function updateUI(status) {
+    connected = status.connected;
+    connecting = false;
+
+    const btn = $('connectBtn');
+    const dot = $('headerDot');
+
+    if (connected) {
+      btn.className = 'connect-btn connected';
+      $('btnLabel').textContent = 'Disconnect';
+      $('connectStatus').textContent = 'Connected via ' + (status.hops || 3) + ' hops';
+      dot.className = 'status-dot connected';
+      $('headerStatus').textContent = 'Connected';
+      $('statStatus').textContent = 'Connected';
+      $('statStatus').className = 'stat-value green';
+      $('uptimeDisplay').classList.add('visible');
+      if (!uptimeInterval) {
+        uptimeStart = Date.now() - (status.uptime_seconds || 0) * 1000;
+        uptimeInterval = setInterval(tickUptime, 1000);
+        tickUptime();
+      }
+    } else {
+      btn.className = 'connect-btn';
+      $('btnLabel').textContent = 'Connect';
+      $('connectStatus').textContent = 'Click to connect';
+      dot.className = 'status-dot';
+      $('headerStatus').textContent = 'Disconnected';
+      $('statStatus').textContent = 'Disconnected';
+      $('statStatus').className = 'stat-value red';
+      $('uptimeDisplay').classList.remove('visible');
+      $('uptimeDisplay').textContent = '00:00:00';
+      $('statUptime').textContent = '--:--:--';
+      if (uptimeInterval) {
+        clearInterval(uptimeInterval);
+        uptimeInterval = null;
+      }
+    }
+
+    $('statCircuits').textContent = status.circuits_built || 0;
+    $('statUpload').textContent = formatBytes(status.bytes_sent || 0);
+    $('statDownload').textContent = formatBytes(status.bytes_recv || 0);
+
+    const tokens = status.tokens_remaining || 0;
+    if (status.max_tokens) maxTokens = status.max_tokens;
+    $('statTokens').textContent = tokens;
+    const pct = maxTokens > 0 ? (tokens / maxTokens) * 100 : 0;
+    const bar = $('tokenBar');
+    bar.style.width = pct + '%';
+    bar.className = 'token-bar-fill' + (pct < 15 ? ' critical' : pct < 30 ? ' warning' : '');
+    $('statTokens').className = 'stat-value ' + (pct < 15 ? 'red' : pct < 30 ? 'yellow' : 'green');
+
+    // Circuit path
+    if (status.circuit_path && status.circuit_path.length > 0) {
+      renderCircuit(status.circuit_path);
+    } else if (!connected) {
+      $('circuitPath').innerHTML = '<div class="empty-state">No active circuit</div>';
+    }
+  }
+
+  function renderCircuit(path) {
+    const container = $('circuitPath');
+    container.innerHTML = '';
+
+    // You node
+    addNode(container, 'YOU', 'you', '');
+    addArrow(container, connected);
+
+    for (let i = 0; i < path.length; i++) {
+      const r = path[i];
+      let role = r.role || 'middle';
+      if (i === 0) role = 'guard';
+      else if (i === path.length - 1) role = 'exit';
+
+      addNode(container, role.toUpperCase(), role, r.id ? r.id.substring(0, 8) : '');
+      addArrow(container, connected);
+    }
+
+    // Internet node
+    addNode(container, 'NET', 'internet', '');
+  }
+
+  function addNode(container, label, cls, id) {
+    const node = document.createElement('div');
+    node.className = 'circuit-node';
+    node.innerHTML = '<div class="node-circle ' + cls + '">' + label.substring(0, 3) + '</div>' +
+                     '<span class="node-label">' + label + '</span>' +
+                     (id ? '<span class="node-id">' + escapeHtml(id) + '</span>' : '<span class="node-id">&nbsp;</span>');
+    container.appendChild(node);
+  }
+
+  function addArrow(container, active) {
+    const arrow = document.createElement('div');
+    arrow.className = 'circuit-arrow' + (active ? ' active' : '');
+    container.appendChild(arrow);
+  }
+
+  function updateRelays(relays) {
+    const container = $('relayList');
+    if (!relays || relays.length === 0) {
+      container.innerHTML = '<div class="empty-state">No relays loaded</div>';
+      return;
+    }
+    let html = '<table class="relay-table"><thead><tr><th>ID</th><th>Address</th><th>Role</th></tr></thead><tbody>';
+    for (const r of relays) {
+      html += '<tr>' +
+              '<td><span class="relay-id">' + escapeHtml((r.id||'').substring(0, 16)) + '</span></td>' +
+              '<td>' + escapeHtml(r.address || '') + '</td>' +
+              '<td><span class="role-badge ' + (r.role||'any') + '">' + escapeHtml(r.role||'any') + '</span></td>' +
+              '</tr>';
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  function updateSettings(settings) {
+    if (settings.hops !== undefined) {
+      $('settHops').value = settings.hops;
+      $('hopsVal').textContent = settings.hops;
+    }
+    if (settings.auth_url !== undefined) $('settAuthURL').value = settings.auth_url;
+    if (settings.directory_file !== undefined) $('settDirFile').value = settings.directory_file;
+    if (settings.auto_reconnect !== undefined) $('settAutoReconnect').checked = settings.auto_reconnect;
+  }
+
+  function tickUptime() {
+    if (!uptimeStart) return;
+    const seconds = (Date.now() - uptimeStart) / 1000;
+    const str = formatUptime(seconds);
+    $('uptimeDisplay').textContent = str;
+    $('statUptime').textContent = str;
+  }
+
+  // WebSocket
+  function connectWS() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(proto + '//' + location.host + '/ws');
+
+    ws.onopen = function() {
+      addLog('WebSocket connected to backend', 'success');
+    };
+
+    ws.onmessage = function(e) {
+      try {
+        const msg = JSON.parse(e.data);
+        switch (msg.type) {
+          case 'status':
+            updateUI(msg.data);
+            break;
+          case 'relays':
+            updateRelays(msg.data);
+            break;
+          case 'settings':
+            updateSettings(msg.data);
+            break;
+          case 'log':
+            addLog(msg.data.message, msg.data.level);
+            break;
+        }
+      } catch(err) {
+        console.error('ws parse error:', err);
+      }
+    };
+
+    ws.onclose = function() {
+      addLog('WebSocket disconnected, reconnecting...', 'warning');
+      setTimeout(connectWS, 2000);
+    };
+
+    ws.onerror = function() {};
+  }
+
+  // API calls
+  window.toggleConnection = function() {
+    if (connecting) return;
+
+    if (connected) {
+      addLog('Disconnecting...', 'warning');
+      fetch('/api/disconnect', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => { if (d.error) addLog('Error: ' + d.error, 'error'); })
+        .catch(e => addLog('Error: ' + e.message, 'error'));
+    } else {
+      connecting = true;
+      const btn = $('connectBtn');
+      btn.className = 'connect-btn connecting';
+      $('btnLabel').textContent = 'Connecting';
+      $('connectStatus').textContent = 'Building circuit...';
+      addLog('Connecting...', 'info');
+
+      fetch('/api/connect', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+          if (d.error) {
+            addLog('Error: ' + d.error, 'error');
+            connecting = false;
+            btn.className = 'connect-btn';
+            $('btnLabel').textContent = 'Connect';
+            $('connectStatus').textContent = 'Click to connect';
+          }
+        })
+        .catch(e => {
+          addLog('Error: ' + e.message, 'error');
+          connecting = false;
+          btn.className = 'connect-btn';
+          $('btnLabel').textContent = 'Connect';
+          $('connectStatus').textContent = 'Click to connect';
+        });
+    }
+  };
+
+  window.saveSettings = function() {
+    const settings = {
+      hops: parseInt($('settHops').value),
+      auth_url: $('settAuthURL').value,
+      directory_file: $('settDirFile').value,
+      auto_reconnect: $('settAutoReconnect').checked
+    };
+
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings)
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) {
+        addLog('Settings error: ' + d.error, 'error');
+      } else {
+        addLog('Settings saved', 'success');
+      }
+    })
+    .catch(e => addLog('Error: ' + e.message, 'error'));
+  };
+
+  // Auth server controls
+  window.startAuth = function() {
+    const listen = $('authListen').value || ':9000';
+    const secret = $('authSecret').value;
+    if (!secret) { addLog('Auth secret is required', 'error'); return; }
+    fetch('/api/auth/start', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({listen: listen, secret: secret})
+    }).then(r => r.json()).then(d => {
+      if (d.error) { addLog('Auth: ' + d.error, 'error'); return; }
+      $('authStatus').textContent = 'Running on ' + listen;
+      $('authStatus').className = 'stat-value green';
+      $('authStartBtn').style.display = 'none';
+      $('authStopBtn').style.display = '';
+    }).catch(e => addLog('Auth error: ' + e.message, 'error'));
+  };
+
+  window.stopAuth = function() {
+    fetch('/api/auth/stop', {method:'POST'}).then(r => r.json()).then(d => {
+      $('authStatus').textContent = 'Stopped';
+      $('authStatus').className = 'stat-value red';
+      $('authStartBtn').style.display = '';
+      $('authStopBtn').style.display = 'none';
+    });
+  };
+
+  // Relay management
+  window.addRelay = function() {
+    const addr = $('newRelayAddr').value;
+    const role = $('newRelayRole').value;
+    if (!addr) { addLog('Relay address is required', 'error'); return; }
+    fetch('/api/relays/add', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({address: addr, role: role})
+    }).then(r => r.json()).then(d => {
+      if (d.error) { addLog('Add relay: ' + d.error, 'error'); return; }
+      $('newRelayAddr').value = '';
+      addLog('Relay added: ' + d.id, 'success');
+    }).catch(e => addLog('Error: ' + e.message, 'error'));
+  };
+
+  window.removeRelay = function(id) {
+    if (!confirm('Remove relay ' + id + '?')) return;
+    fetch('/api/relays/remove', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({id: id})
+    }).then(r => r.json()).then(d => {
+      if (d.error) addLog('Remove: ' + d.error, 'error');
+    }).catch(e => addLog('Error: ' + e.message, 'error'));
+  };
+
+  window.showDeploy = function() {
+    fetch('/api/relays/deploy', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({os:'linux', arch:'amd64', port:'9001', exit:false})
+    }).then(r => r.json()).then(d => {
+      $('deployScript').textContent = d.script;
+      $('deployModal').style.display = 'flex';
+    });
+  };
+
+  window.hideModal = function() {
+    $('deployModal').style.display = 'none';
+  };
+
+  window.copyDeploy = function() {
+    navigator.clipboard.writeText($('deployScript').textContent);
+    addLog('Deploy script copied to clipboard', 'success');
+  };
+
+  // Override updateRelays to add remove buttons
+  var origUpdateRelays = updateRelays;
+  updateRelays = function(relays) {
+    const container = $('relayList');
+    if (!relays || relays.length === 0) {
+      container.innerHTML = '<div class="empty-state">No relays loaded</div>';
+      return;
+    }
+    let html = '<table class="relay-table"><thead><tr><th>ID</th><th>Address</th><th>Role</th><th></th></tr></thead><tbody>';
+    for (const r of relays) {
+      html += '<tr>' +
+        '<td><span class="relay-id">' + escapeHtml((r.id||'').substring(0, 16)) + '</span></td>' +
+        '<td>' + escapeHtml(r.address || '') + '</td>' +
+        '<td><span class="role-badge ' + (r.role||'any') + '">' + escapeHtml(r.role||'any') + '</span></td>' +
+        '<td><button onclick="removeRelay(\'' + escapeHtml(r.id||'') + '\')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px" title="Remove">&times;</button></td>' +
+        '</tr>';
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  };
+
+  // Check auth status on load
+  function checkAuthStatus() {
+    fetch('/api/auth/status').then(r => r.json()).then(d => {
+      if (d.running) {
+        $('authStatus').textContent = 'Running';
+        $('authStatus').className = 'stat-value green';
+        $('authStartBtn').style.display = 'none';
+        $('authStopBtn').style.display = '';
+      }
+    }).catch(() => {});
+  }
+
+  // Initial data load
+  function loadInitial() {
+    fetch('/api/status').then(r => r.json()).then(updateUI).catch(() => {});
+    fetch('/api/relays').then(r => r.json()).then(updateRelays).catch(() => {});
+    fetch('/api/logs').then(r => r.json()).then(function(logs) {
+      if (logs && logs.length) {
+        for (const l of logs) addLog(l.message, l.level);
+      }
+    }).catch(() => {});
+  }
+
+  connectWS();
+  loadInitial();
+  checkAuthStatus();
+})();
+</script>
+</body>
+</html>

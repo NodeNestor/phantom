@@ -1,0 +1,183 @@
+services:
+  # --- One-time setup: generates keys + directory ---
+  setup:
+    build: .
+    command: bash /scripts/setup-network.sh
+    volumes:
+      - shared:/data
+      - ./scripts:/scripts:ro
+    networks:
+      - phantom
+
+  # --- Auth server: issues blind tokens ---
+  auth:
+    build: .
+    command: >
+      phantom-auth
+        -key /data/network/auth.key
+        -pubkey-out /data/network/auth.pub
+        -listen :9000
+        -secret phantom-test-secret
+    volumes:
+      - shared:/data
+    ports:
+      - "9000:9000"
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    networks:
+      - phantom
+    restart: on-failure
+
+  # --- 5 Relay nodes ---
+  relay-0:
+    build: .
+    command: >
+      phantom-relay
+        -listen :9001
+        -config /data/network/relay-0.json
+        -pubkey /data/network/auth.pub
+    volumes:
+      - shared:/data
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    networks:
+      - phantom
+    restart: on-failure
+
+  relay-1:
+    build: .
+    command: >
+      phantom-relay
+        -listen :9002
+        -config /data/network/relay-1.json
+        -pubkey /data/network/auth.pub
+    volumes:
+      - shared:/data
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    networks:
+      - phantom
+    restart: on-failure
+
+  relay-2:
+    build: .
+    command: >
+      phantom-relay
+        -listen :9003
+        -config /data/network/relay-2.json
+        -pubkey /data/network/auth.pub
+    volumes:
+      - shared:/data
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    networks:
+      - phantom
+    restart: on-failure
+
+  relay-3:
+    build: .
+    command: >
+      phantom-relay
+        -listen :9004
+        -config /data/network/relay-3.json
+        -pubkey /data/network/auth.pub
+    volumes:
+      - shared:/data
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    networks:
+      - phantom
+    restart: on-failure
+
+  relay-4:
+    build: .
+    command: >
+      phantom-relay
+        -listen :9005
+        -config /data/network/relay-4.json
+        -pubkey /data/network/auth.pub
+        -exit
+    volumes:
+      - shared:/data
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    networks:
+      - phantom
+    restart: on-failure
+
+  # --- Client: SOCKS5 proxy ---
+  client:
+    build: .
+    command: >
+      phantom-client
+        -listen 0.0.0.0:1080
+        -directory /data/network/directory.json
+        -auth http://auth:9000
+        -secret phantom-test-secret
+        -hops 3
+        -tokens 200
+    volumes:
+      - shared:/data
+    ports:
+      - "1080:1080"
+    depends_on:
+      - auth
+      - relay-0
+      - relay-1
+      - relay-2
+      - relay-3
+      - relay-4
+    networks:
+      - phantom
+    restart: on-failure
+
+  # --- Web UI ---
+  ui:
+    build: .
+    command: >
+      phantom-ui
+        -listen 0.0.0.0:3000
+        -directory /data/network/directory.json
+        -auth http://auth:9000
+        -secret phantom-test-secret
+    volumes:
+      - shared:/data
+    ports:
+      - "3001:3000"
+    depends_on:
+      - auth
+      - relay-0
+      - relay-1
+      - relay-2
+      - relay-3
+      - relay-4
+    networks:
+      - phantom
+    restart: on-failure
+
+  # --- Test runner ---
+  test:
+    build: .
+    command: bash /scripts/wait-and-test.sh
+    volumes:
+      - shared:/data
+      - ./scripts:/scripts:ro
+    depends_on:
+      - client
+    networks:
+      - phantom
+    profiles:
+      - test
+
+volumes:
+  shared:
+
+networks:
+  phantom:
+    driver: bridge
