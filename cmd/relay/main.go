@@ -88,7 +88,7 @@ func main() {
 		log.Printf("saved keys to %s", *configFile)
 	}
 
-	fmt.Printf("\n  Relay ID:         %s\n", hex.EncodeToString(onionKP.Public[:8]))
+	fmt.Printf("\n  Relay ID:         %s\n", hex.EncodeToString(onionKP.Public[:16]))
 	fmt.Printf("  Onion Public Key: %s\n", hex.EncodeToString(onionKP.Public[:]))
 	fmt.Printf("  Noise Public Key: %s\n", hex.EncodeToString(noiseKey.Public))
 	fmt.Printf("  Exit node:        %v\n\n", *exit)

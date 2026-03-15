@@ -4,6 +4,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"flag"
@@ -114,8 +115,12 @@ func main() {
 		log.Fatalf("save directory: %v", err)
 	}
 
-	// Generate a random secret for auth
-	secret := hex.EncodeToString([]byte("phantom-dev-secret-change-me!"))
+	// Generate a cryptographically random secret for auth
+	secretBytes := make([]byte, 32)
+	if _, err := rand.Read(secretBytes); err != nil {
+		log.Fatalf("generate secret: %v", err)
+	}
+	secret := hex.EncodeToString(secretBytes)
 
 	// Print startup commands
 	fmt.Println("\n========================================")

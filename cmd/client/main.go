@@ -54,6 +54,11 @@ func main() {
 		log.Fatalf("generate noise key: %v", err)
 	}
 
+	// Prefer env var over CLI arg (CLI args visible in ps aux)
+	if *authSecret == "" {
+		*authSecret = os.Getenv("PHANTOM_SECRET")
+	}
+
 	if *authURL == "" {
 		log.Fatalf("-auth is required")
 	}

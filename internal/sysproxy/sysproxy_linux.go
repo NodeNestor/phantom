@@ -18,7 +18,9 @@ func Enable(host string, port int) error {
 			{"gsettings", "set", "org.gnome.system.proxy.socks", "port", fmt.Sprintf("%d", port)},
 		}
 		for _, args := range cmds {
-			_ = exec.Command(args[0], args[1:]...).Run()
+			if err := exec.Command(args[0], args[1:]...).Run(); err != nil {
+				return fmt.Errorf("gsettings: %w", err)
+			}
 		}
 	}
 
@@ -28,7 +30,9 @@ func Enable(host string, port int) error {
 			{"kwriteconfig5", "--file", "kioslaverc", "--group", "Proxy Settings", "--key", "socksProxy", proxyURL},
 		}
 		for _, args := range cmds {
-			_ = exec.Command(args[0], args[1:]...).Run()
+			if err := exec.Command(args[0], args[1:]...).Run(); err != nil {
+				return fmt.Errorf("kwriteconfig5: %w", err)
+			}
 		}
 	}
 
@@ -38,11 +42,15 @@ func Enable(host string, port int) error {
 // Disable restores Linux proxy settings to default (no proxy).
 func Disable() error {
 	if path, err := exec.LookPath("gsettings"); err == nil && path != "" {
-		_ = exec.Command("gsettings", "set", "org.gnome.system.proxy", "mode", "none").Run()
+		if err := exec.Command("gsettings", "set", "org.gnome.system.proxy", "mode", "none").Run(); err != nil {
+			return fmt.Errorf("gsettings: %w", err)
+		}
 	}
 
 	if path, err := exec.LookPath("kwriteconfig5"); err == nil && path != "" {
-		_ = exec.Command("kwriteconfig5", "--file", "kioslaverc", "--group", "Proxy Settings", "--key", "ProxyType", "0").Run()
+		if err := exec.Command("kwriteconfig5", "--file", "kioslaverc", "--group", "Proxy Settings", "--key", "ProxyType", "0").Run(); err != nil {
+			return fmt.Errorf("kwriteconfig5: %w", err)
+		}
 	}
 
 	return nil
