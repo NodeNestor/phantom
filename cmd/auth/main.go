@@ -22,8 +22,12 @@ func main() {
 	secret := flag.String("secret", "", "shared secret for token requests (required)")
 	flag.Parse()
 
+	// Prefer env var over CLI arg (CLI args visible in ps aux)
 	if *secret == "" {
-		fmt.Fprintln(os.Stderr, "error: -secret is required")
+		*secret = os.Getenv("PHANTOM_SECRET")
+	}
+	if *secret == "" {
+		fmt.Fprintln(os.Stderr, "error: -secret or PHANTOM_SECRET env var is required")
 		os.Exit(1)
 	}
 

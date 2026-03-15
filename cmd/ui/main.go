@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
@@ -883,16 +884,29 @@ func (a *App) handleWS(w http.ResponseWriter, r *http.Request) {
 
 	// Read loop (just to detect close / handle pings)
 	for {
-		opcode, _, err := ws.readFrame()
+		opcode, payload, err := ws.readFrame()
 		if err != nil {
 			break
 		}
 		switch opcode {
 		case 0x08: // close
 			goto done
-		case 0x09: // ping — respond with pong
+		case 0x09: // ping — respond with pong, echoing the ping payload
 			ws.writeMu.Lock()
-			pong := []byte{0x8A, 0x00}
+			pongLen := len(payload)
+			var pong []byte
+			if pongLen < 126 {
+				pong = make([]byte, 2+pongLen)
+				pong[0] = 0x8A
+				pong[1] = byte(pongLen)
+				copy(pong[2:], payload)
+			} else {
+				pong = make([]byte, 4+pongLen)
+				pong[0] = 0x8A
+				pong[1] = 126
+				binary.BigEndian.PutUint16(pong[2:4], uint16(pongLen))
+				copy(pong[4:], payload)
+			}
 			ws.conn.Write(pong)
 			ws.writeMu.Unlock()
 		}
@@ -1209,6 +1223,11 @@ func main() {
 	tokenCount := flag.Int("tokens", 50, "Number of tokens to request")
 	flag.Parse()
 
+	// Prefer env var over CLI arg (CLI args visible in ps aux)
+	if *authSecret == "" {
+		*authSecret = os.Getenv("PHANTOM_SECRET")
+	}
+
 	settings := Settings{
 		Hops:          *hops,
 		AuthURL:       *authURL,
@@ -1220,28 +1239,54 @@ func main() {
 
 	app := newApp(settings)
 
+	// Generate a random access token for the UI
+	accessTokenBytes := make([]byte, 32)
+	if _, err := rand.Read(accessTokenBytes); err != nil {
+		log.Fatalf("generate access token: %v", err)
+	}
+	accessToken := hex.EncodeToString(accessTokenBytes)
+
+	// Auth middleware: requires ?token= query param or Authorization header
+	requireAuth := func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			tok := r.URL.Query().Get("token")
+			if tok == "" {
+				auth := r.Header.Get("Authorization")
+				if strings.HasPrefix(auth, "Bearer ") {
+					tok = strings.TrimPrefix(auth, "Bearer ")
+				}
+			}
+			if tok != accessToken {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			next(w, r)
+		}
+	}
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", app.handleIndex)
-	mux.HandleFunc("/api/status", app.handleStatus)
-	mux.HandleFunc("/api/connect", app.handleConnect)
-	mux.HandleFunc("/api/disconnect", app.handleDisconnect)
-	mux.HandleFunc("/api/relays", app.handleRelays)
-	mux.HandleFunc("/api/logs", app.handleLogs)
-	mux.HandleFunc("/api/settings", app.handleSettings)
-	mux.HandleFunc("/api/auth/start", app.handleAuthStart)
-	mux.HandleFunc("/api/auth/stop", app.handleAuthStop)
-	mux.HandleFunc("/api/auth/status", app.handleAuthStatus)
-	mux.HandleFunc("/api/relays/add", app.handleAddRelay)
-	mux.HandleFunc("/api/relays/remove", app.handleRemoveRelay)
-	mux.HandleFunc("/api/relays/deploy", app.handleDeployScript)
-	mux.HandleFunc("/ws", app.handleWS)
+	mux.HandleFunc("/", app.handleIndex) // serves static HTML, no auth needed
+	mux.HandleFunc("/api/status", requireAuth(app.handleStatus))
+	mux.HandleFunc("/api/connect", requireAuth(app.handleConnect))
+	mux.HandleFunc("/api/disconnect", requireAuth(app.handleDisconnect))
+	mux.HandleFunc("/api/relays", requireAuth(app.handleRelays))
+	mux.HandleFunc("/api/logs", requireAuth(app.handleLogs))
+	mux.HandleFunc("/api/settings", requireAuth(app.handleSettings))
+	mux.HandleFunc("/api/auth/start", requireAuth(app.handleAuthStart))
+	mux.HandleFunc("/api/auth/stop", requireAuth(app.handleAuthStop))
+	mux.HandleFunc("/api/auth/status", requireAuth(app.handleAuthStatus))
+	mux.HandleFunc("/api/relays/add", requireAuth(app.handleAddRelay))
+	mux.HandleFunc("/api/relays/remove", requireAuth(app.handleRemoveRelay))
+	mux.HandleFunc("/api/relays/deploy", requireAuth(app.handleDeployScript))
+	mux.HandleFunc("/ws", requireAuth(app.handleWS))
 
 	server := &http.Server{
 		Addr:    *listenAddr,
 		Handler: mux,
 	}
 
-	app.addLog(fmt.Sprintf("Phantom VPN UI starting on http://%s", *listenAddr), "info")
+	app.addLog(fmt.Sprintf("Phantom VPN UI starting on http://%s/?token=%s", *listenAddr, accessToken), "info")
+	fmt.Printf("\n  Access URL: http://%s/?token=%s\n\n", *listenAddr, accessToken)
 
 	go func() {
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {

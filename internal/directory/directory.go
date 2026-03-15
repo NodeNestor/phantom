@@ -173,9 +173,9 @@ func pickRandom(candidates []*Relay, used map[string]bool) (*Relay, error) {
 	return available[idx.Int64()], nil
 }
 
-// RelayID generates a relay ID from its public key.
+// RelayID generates a relay ID from its public key (128-bit fingerprint).
 func RelayID(pubKey [onion.KeySize]byte) string {
-	return hex.EncodeToString(pubKey[:8]) // first 8 bytes as hex
+	return hex.EncodeToString(pubKey[:16]) // first 16 bytes as hex
 }
 
 // --- Persistence ---

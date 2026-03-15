@@ -17,7 +17,7 @@ services:
         -key /data/network/auth.key
         -pubkey-out /data/network/auth.pub
         -listen :9000
-        -secret phantom-test-secret
+        -secret ${PHANTOM_SECRET:-phantom-test-secret}
     volumes:
       - shared:/data
     ports:
@@ -119,7 +119,7 @@ services:
         -listen 0.0.0.0:1080
         -directory /data/network/directory.json
         -auth http://auth:9000
-        -secret phantom-test-secret
+        -secret ${PHANTOM_SECRET:-phantom-test-secret}
         -hops 3
         -tokens 200
     volumes:
@@ -145,7 +145,7 @@ services:
         -listen 0.0.0.0:3000
         -directory /data/network/directory.json
         -auth http://auth:9000
-        -secret phantom-test-secret
+        -secret ${PHANTOM_SECRET:-phantom-test-secret}
     volumes:
       - shared:/data
     ports:

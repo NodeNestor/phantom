@@ -1,5 +1,5 @@
 // Package transport implements Noise protocol encrypted connections between hops.
-// Uses Noise_IK pattern: client knows relay's static key, authenticates immediately.
+// Uses Noise_XX pattern: mutual authentication with ephemeral and static keys.
 // This encrypts the transport layer — onion encryption is on top of this.
 package transport
 
