@@ -1,0 +1,4 @@
+dist/
+network/
+*.key
+*.exe
