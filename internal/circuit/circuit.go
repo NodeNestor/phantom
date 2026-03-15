@@ -4,6 +4,7 @@
 package circuit
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -104,10 +105,18 @@ func (m *Manager) BuildCircuit(destAddr string) (*Circuit, error) {
 	}
 
 	// Noise handshake
-	noiseConn, _, err := transport.Handshake(rawConn, m.entryKey)
+	noiseConn, peerKey, err := transport.Handshake(rawConn, m.entryKey)
 	if err != nil {
 		rawConn.Close()
 		return nil, fmt.Errorf("handshake: %w", err)
+	}
+
+	// Verify the entry relay's Noise static key if one is stored in the directory
+	if path[0].NoisePublicKey != nil {
+		if len(peerKey) != len(path[0].NoisePublicKey) || !bytes.Equal(peerKey, path[0].NoisePublicKey) {
+			noiseConn.Close()
+			return nil, fmt.Errorf("entry relay Noise key mismatch")
+		}
 	}
 
 	// Send entry token
